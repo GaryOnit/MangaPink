@@ -991,3 +991,45 @@ export function useMangaData() {
 ---
 
 *文档由 CatPaw AI 自动生成，经交叉复核（8 处修正）后定稿（v1.1）。*
+
+---
+
+## 实际执行差异记录（2026-06-03）
+
+### 技术方案变更
+
+| 评审方案 | 实际执行 | 原因 |
+|---------|---------|------|
+| NativeWind v4 (`^4.0.36`) | NativeWind v2 (`^2.0.11`) | v4 内置 react-native-worklets-core 需要 C++ NDK 编译，与 Expo SDK 51 Managed Workflow 不兼容 |
+| `babel.config.js` 含 `nativewind/babel` preset | 仅保留 `babel-preset-expo` | v4 的 Babel 插件链会触发 react-native-worklets/plugin 找不到的错误 |
+| `metro.config.js` 使用 `withNativeWind` wrapper | 移除 `withNativeWind`，使用默认 `getDefaultConfig` | v2 不需要 Metro CSS 处理管道 |
+| `tailwind.config.js` 含 `presets: [require('nativewind/preset')]` | 不含 preset 字段 | 该 preset 仅 v4 需要 |
+| `global.css` 作为 NativeWind CSS 入口 | 无 `global.css` 文件 | v2 不使用 CSS runtime，不需要全局 CSS 入口 |
+| `expo start --android` | `expo run:android` | 前者依赖 Expo Go，模拟器无 Expo Go 时会卡住；`package.json` 的 `android` 脚本已更新为 `expo run:android` |
+
+### 新增文件（评审未列出）
+
+| 文件路径 | 说明 |
+|---------|------|
+| `src/screens/reader/components/ReaderHeader.tsx` | 从 `ReaderScreen.tsx` 拆分，控制文件行数 ≤200 行 |
+| `src/screens/detail/components/MangaInfoSection.tsx` | 从 `MangaDetailScreen.tsx` 拆分，控制文件行数 ≤200 行 |
+
+### 风险实际处置
+
+| 风险项 | 评审等级 | 实际情况 | 处置方式 |
+|-------|---------|---------|---------|
+| NativeWind v4 兼容性（§5.1） | 🟡 中风险 | **已触发**：v4 构建失败 | 降级到 v2，项目样式全部使用 `StyleSheet.create`，className 已最小化 |
+| FlatList 大量图片内存管理（§5.3） | 🟠 高风险（低端 Android） | 已验证可控 | `windowSize={5}` + `removeClippedSubviews` + expo-image 内存缓存三层防护 |
+| FlatList 动态高度 getItemLayout | 🟠 高（评审未单独列出） | **新发现** | 通过 `useMemo` 预计算 `pageOffsets` 数组 + `getItemLayout` 查表解决，支持 `initialScrollIndex` 精准跳转 |
+| onViewableItemsChanged 引用稳定性 | 🟡 新发现（评审未覆盖） | **已触发**：直接绑定 useCallback 引发警告 | 通过 `useRef` 包裹回调 + `useEffect` 同步最新依赖解决 |
+| Redux Persist + AsyncStorage 时序（§5.2） | 🟡 中风险 | 已验证 | `App.tsx` 使用 `PersistGate` 包裹，等待 rehydrate 完成后再渲染业务组件 |
+
+### 实际文件数统计
+
+- 评审预估：57 个文件
+- 实际产出：**49 个 `.ts`/`.tsx` 源文件**（不含测试文件，测试文件留待后续补充）
+- 差异说明：测试文件（3 个）未在本次开发阶段生成；工程配置文件（`App.tsx`、`tailwind.config.js` 等）不计入 `src/` 统计
+
+---
+
+*差异记录由 CatPaw AI 在 Phase 4 知识库同步阶段自动生成。*
