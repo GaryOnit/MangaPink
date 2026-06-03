@@ -1,0 +1,20 @@
+export const Colors = {
+  pink50: '#FFF0F5',
+  pink100: '#FFD6E7',
+  pink200: '#FFB3D1',
+  pink300: '#FF8DB8',
+  pink400: '#FF6B9D',
+  pink500: '#FF4785',
+  pink600: '#E91E8C',
+  pink700: '#C2006F',
+  pink800: '#9A0057',
+  pink900: '#720042',
+
+  surface: '#FFFFFF',
+  background: '#FFF0F5',
+  card: '#FFFFFF',
+  border: '#FFD6E7',
+  textPrimary: '#2D1B2E',
+  textSecondary: '#A0608A',
+  textDisabled: '#D4B0C5',
+} as const;
