@@ -49,7 +49,7 @@ export default function CategoryScreen({ navigation }: Props) {
       {/* 漫画网格 */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <CategoryGroup mangas={filteredMangas} onPressManga={handlePressManga} />
-        <View style={{ height: 20 }} />
+        <View style={styles.spacer} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -106,5 +106,8 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  spacer: {
+    height: 20,
   },
 });

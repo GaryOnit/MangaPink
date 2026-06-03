@@ -23,15 +23,15 @@ export default function CategoryGroup({ mangas, onPressManga }: Props) {
     <FlatList
       data={mangas}
       keyExtractor={(item) => item.id}
-      numColumns={3}
+      numColumns={2}
       scrollEnabled={false}
       columnWrapperStyle={styles.row}
       contentContainerStyle={styles.content}
       renderItem={({ item }) => (
         <MangaCard
           manga={item}
-          onPress={() => onPressManga(item)}
-          cardWidth={MANGA_CARD.WIDTH}
+          onPress={onPressManga}
+          width={MANGA_CARD.WIDTH}
         />
       )}
     />
@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
   },
   row: {
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   empty: {
     paddingVertical: 40,

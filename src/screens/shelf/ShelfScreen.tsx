@@ -9,11 +9,25 @@ import { useAppSelector } from '../../store/hooks';
 import { selectAllProgress } from '../../store/selectors/readingProgressSelectors';
 import { useMangaData } from '../../hooks/useMangaData';
 import { Colors } from '../../theme/colors';
+import type { BookshelfEntry } from '../../store/slices/bookshelfSlice';
+import type { ProgressEntry } from '../../store/slices/readingProgressSlice';
 
 type Props = NativeStackScreenProps<ShelfStackParamList, 'Shelf'>;
 
+/** 从全量进度记录中找出指定漫画的最新进度 */
+function findLatestProgress(
+  allProgress: Record<string, ProgressEntry>,
+  mangaId: string
+): ProgressEntry | undefined {
+  const entries = Object.values(allProgress).filter((e) => e.mangaId === mangaId);
+  if (entries.length === 0) return undefined;
+  return entries.reduce((latest, curr) =>
+    curr.updatedAt > latest.updatedAt ? curr : latest
+  );
+}
+
 export default function ShelfScreen({ navigation }: Props) {
-  const { items } = useBookshelf();
+  const { bookshelfList } = useBookshelf();
   const { getMangaById } = useMangaData();
   const allProgress = useAppSelector(selectAllProgress);
 
@@ -21,29 +35,31 @@ export default function ShelfScreen({ navigation }: Props) {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>📚 我的书架</Text>
-        <Text style={styles.headerCount}>{items.length} 部</Text>
+        <Text style={styles.headerCount}>{bookshelfList.length} 部</Text>
       </View>
 
-      {items.length === 0 ? (
+      {bookshelfList.length === 0 ? (
         <EmptyState
-          title="书架还是空的"
-          subtitle="去首页发现喜欢的漫画，点击收藏加入书架吧~"
-          icon={<Text style={{ fontSize: 48, marginBottom: 16 }}>📭</Text>}
+          icon="📭"
+          title="书架空空如也 📚"
+          description="去首页发现喜欢的漫画，点击收藏加入书架吧~"
         />
       ) : (
-        <FlatList
-          data={items}
+        <FlatList<BookshelfEntry>
+          data={bookshelfList}
           keyExtractor={(item) => item.mangaId}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
           renderItem={({ item }) => {
             const manga = getMangaById(item.mangaId);
             if (!manga) return null;
+            const latestProgress = findLatestProgress(allProgress, item.mangaId);
             return (
               <ShelfItem
                 manga={manga}
                 addedAt={item.addedAt}
-                progress={allProgress[item.mangaId]}
+                progress={latestProgress}
+                navigation={navigation}
                 onPress={() => navigation.push('MangaDetail', { mangaId: manga.id })}
               />
             );

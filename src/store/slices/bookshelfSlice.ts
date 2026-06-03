@@ -1,47 +1,48 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-export interface BookshelfItem {
+export interface BookshelfEntry {
   mangaId: string;
   addedAt: number;
-  latestChapterId: string;
+  lastReadChapterId?: string;
+  lastReadPage?: number;
 }
 
 export interface BookshelfState {
-  items: BookshelfItem[];
+  entries: Record<string, BookshelfEntry>;
 }
 
 const initialState: BookshelfState = {
-  items: [],
+  entries: {},
 };
 
 const bookshelfSlice = createSlice({
   name: 'bookshelf',
   initialState,
   reducers: {
-    addToBookshelf: (state, action: PayloadAction<{ mangaId: string; latestChapterId: string }>) => {
-      const exists = state.items.some((item) => item.mangaId === action.payload.mangaId);
-      if (!exists) {
-        state.items.push({
-          mangaId: action.payload.mangaId,
+    addToBookshelf: (state, action: PayloadAction<string>) => {
+      const mangaId = action.payload;
+      if (!state.entries[mangaId]) {
+        state.entries[mangaId] = {
+          mangaId,
           addedAt: Date.now(),
-          latestChapterId: action.payload.latestChapterId,
-        });
+        };
       }
     },
     removeFromBookshelf: (state, action: PayloadAction<string>) => {
-      state.items = state.items.filter((item) => item.mangaId !== action.payload);
+      delete state.entries[action.payload];
     },
-    updateLatestChapter: (
+    updateLastRead: (
       state,
-      action: PayloadAction<{ mangaId: string; chapterId: string }>
+      action: PayloadAction<{ mangaId: string; chapterId: string; page: number }>
     ) => {
-      const item = state.items.find((i) => i.mangaId === action.payload.mangaId);
-      if (item) {
-        item.latestChapterId = action.payload.chapterId;
+      const { mangaId, chapterId, page } = action.payload;
+      if (state.entries[mangaId]) {
+        state.entries[mangaId].lastReadChapterId = chapterId;
+        state.entries[mangaId].lastReadPage = page;
       }
     },
   },
 });
 
-export const { addToBookshelf, removeFromBookshelf, updateLatestChapter } = bookshelfSlice.actions;
+export const { addToBookshelf, removeFromBookshelf, updateLastRead } = bookshelfSlice.actions;
 export default bookshelfSlice.reducer;

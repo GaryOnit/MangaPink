@@ -13,9 +13,12 @@ export const READER_PAGE = {
   HEIGHT: Math.round(SCREEN_WIDTH * (640 / 360)),
 };
 
+// 漫画卡片尺寸（2 列网格）
 export const MANGA_CARD = {
-  WIDTH: (SCREEN_WIDTH - 48) / 3,  // 三列网格
-  HEIGHT: Math.round(((SCREEN_WIDTH - 48) / 3) * (4 / 3)),
+  WIDTH: (SCREEN_WIDTH - 48) / 2,
+  HEIGHT: Math.round(((SCREEN_WIDTH - 48) / 2) * (4 / 3)),
 };
 
 export const HISTORY_MAX_RECORDS = 50;
+
+export const MANGA_TAGS = ['全部', '恋爱', '校园', '古风', '奇幻', '治愈', '搞笑', '悬疑'];

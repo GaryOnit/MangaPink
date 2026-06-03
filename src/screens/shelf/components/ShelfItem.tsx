@@ -1,19 +1,34 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { ShelfStackParamList } from '../../../navigation/types';
 import type { Manga } from '../../../types/manga';
-import type { ReadingProgress } from '../../../store/slices/readingProgressSlice';
+import type { ProgressEntry } from '../../../store/slices/readingProgressSlice';
 import MangaCover from '../../../components/MangaCover';
 import { Colors } from '../../../theme/colors';
-import { formatRelativeTime, formatReadingProgress } from '../../../utils/formatters';
+import { formatRelativeTime } from '../../../utils/formatters';
 
 interface Props {
   manga: Manga;
   addedAt: number;
-  progress?: ReadingProgress;
+  progress?: ProgressEntry;
+  navigation: NativeStackNavigationProp<ShelfStackParamList, 'Shelf'>;
   onPress: () => void;
 }
 
-export default function ShelfItem({ manga, addedAt, progress, onPress }: Props) {
+export default function ShelfItem({ manga, addedAt, progress, navigation, onPress }: Props) {
+  const handleContinueReading = () => {
+    if (progress) {
+      navigation.push('Reader', {
+        mangaId: manga.id,
+        chapterId: progress.chapterId,
+        initialPage: progress.page,
+      });
+    } else {
+      navigation.push('MangaDetail', { mangaId: manga.id });
+    }
+  };
+
   return (
     <Pressable onPress={onPress} style={styles.container}>
       <MangaCover mangaId={manga.coverId} size="sm" />
@@ -21,29 +36,19 @@ export default function ShelfItem({ manga, addedAt, progress, onPress }: Props) 
         <Text style={styles.title} numberOfLines={1}>{manga.title}</Text>
         <Text style={styles.author}>{manga.author}</Text>
         {progress ? (
-          <View style={styles.progressRow}>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${Math.round(
-                      ((progress.pageIndex + 1) / progress.totalPages) * 100
-                    )}%`,
-                  },
-                ]}
-              />
-            </View>
-            <Text style={styles.progressText}>
-              {formatReadingProgress(progress.pageIndex, progress.totalPages)}
-            </Text>
-          </View>
+          <Text style={styles.progressText}>
+            {progress.chapterId} · 第{progress.page + 1}页
+          </Text>
         ) : (
           <Text style={styles.unread}>未开始阅读</Text>
         )}
         <Text style={styles.addedAt}>收藏于 {formatRelativeTime(addedAt)}</Text>
       </View>
-      <Text style={styles.arrow}>›</Text>
+      <Pressable onPress={handleContinueReading} style={styles.readBtn}>
+        <Text style={styles.readBtnText}>
+          {progress ? '继续阅读' : '开始阅读'}
+        </Text>
+      </Pressable>
     </Pressable>
   );
 }
@@ -76,44 +81,33 @@ const styles = StyleSheet.create({
   author: {
     fontSize: 12,
     color: Colors.textSecondary,
-    marginBottom: 6,
-  },
-  progressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
     marginBottom: 4,
   },
-  progressBar: {
-    flex: 1,
-    height: 4,
-    backgroundColor: Colors.pink100,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: 4,
-    backgroundColor: Colors.pink400,
-    borderRadius: 2,
-  },
   progressText: {
-    fontSize: 11,
+    fontSize: 12,
     color: Colors.pink600,
     fontWeight: '600',
-    minWidth: 30,
+    marginBottom: 3,
   },
   unread: {
     fontSize: 12,
     color: Colors.textDisabled,
-    marginBottom: 4,
+    marginBottom: 3,
   },
   addedAt: {
     fontSize: 11,
     color: Colors.textDisabled,
   },
-  arrow: {
-    fontSize: 22,
-    color: Colors.pink300,
+  readBtn: {
+    backgroundColor: Colors.pink400,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     marginLeft: 8,
+  },
+  readBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

@@ -42,4 +42,15 @@ export const ChapterAssets: Record<string, PageMeta[]> = {
     { source: require('../../assets/chapters/manga-003/ch-02/page-002.png'), width: 360, height: 640 },
     { source: require('../../assets/chapters/manga-003/ch-02/page-003.png'), width: 360, height: 640 },
   ],
+  // manga-004、005 无独立章节图，复用 manga-001_ch-01 资源
+  'manga-004_ch-01': [
+    { source: require('../../assets/chapters/manga-001/ch-01/page-001.png'), width: 360, height: 640 },
+    { source: require('../../assets/chapters/manga-001/ch-01/page-002.png'), width: 360, height: 640 },
+    { source: require('../../assets/chapters/manga-001/ch-01/page-003.png'), width: 360, height: 640 },
+  ],
+  'manga-005_ch-01': [
+    { source: require('../../assets/chapters/manga-001/ch-01/page-001.png'), width: 360, height: 640 },
+    { source: require('../../assets/chapters/manga-001/ch-01/page-002.png'), width: 360, height: 640 },
+    { source: require('../../assets/chapters/manga-001/ch-01/page-003.png'), width: 360, height: 640 },
+  ],
 };

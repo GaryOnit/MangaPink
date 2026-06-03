@@ -3,21 +3,17 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Colors } from '../theme/colors';
 
 interface Props {
+  icon?: string;
   title: string;
-  subtitle?: string;
-  icon?: React.ReactNode;
+  description?: string;
 }
 
-export default function EmptyState({ title, subtitle, icon }: Props) {
+export default function EmptyState({ icon = '🌸', title, description }: Props) {
   return (
     <View style={styles.container}>
-      {icon ? (
-        icon
-      ) : (
-        <Text style={styles.emoji}>🌸</Text>
-      )}
+      <Text style={styles.emoji}>{icon}</Text>
       <Text style={styles.title}>{title}</Text>
-      {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+      {description && <Text style={styles.description}>{description}</Text>}
     </View>
   );
 }
@@ -41,7 +37,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
-  subtitle: {
+  description: {
     fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',

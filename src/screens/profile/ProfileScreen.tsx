@@ -7,7 +7,7 @@ import { formatRelativeTime } from '../../utils/formatters';
 import MangaCover from '../../components/MangaCover';
 
 export default function ProfileScreen() {
-  const { records, clearAll } = useHistory();
+  const { historyList, clearAll } = useHistory();
   const { getMangaById } = useMangaData();
 
   const handleClearHistory = () => {
@@ -39,25 +39,26 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>最近浏览</Text>
-            {records.length > 0 && (
+            {historyList.length > 0 && (
               <Pressable onPress={handleClearHistory}>
                 <Text style={styles.clearBtn}>清空</Text>
               </Pressable>
             )}
           </View>
 
-          {records.length === 0 ? (
+          {historyList.length === 0 ? (
             <Text style={styles.emptyHint}>暂无浏览记录</Text>
           ) : (
-            records.slice(0, 10).map((record) => {
-              const manga = getMangaById(record.mangaId);
+            historyList.slice(0, 10).map((entry, idx) => {
+              const manga = getMangaById(entry.mangaId);
               if (!manga) return null;
               return (
-                <View key={record.mangaId} style={styles.historyItem}>
+                <View key={`${entry.mangaId}_${entry.chapterId}_${idx}`} style={styles.historyItem}>
                   <MangaCover mangaId={manga.coverId} size="sm" />
                   <View style={styles.historyInfo}>
                     <Text style={styles.historyTitle}>{manga.title}</Text>
-                    <Text style={styles.historyTime}>{formatRelativeTime(record.visitedAt)}</Text>
+                    <Text style={styles.historyChapter}>{entry.chapterId}</Text>
+                    <Text style={styles.historyTime}>{formatRelativeTime(entry.readAt)}</Text>
                   </View>
                 </View>
               );
@@ -65,7 +66,7 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        <View style={{ height: 32 }} />
+        <View style={styles.spacer} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -169,9 +170,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.textPrimary,
   },
-  historyTime: {
+  historyChapter: {
     fontSize: 12,
     color: Colors.textSecondary,
-    marginTop: 3,
+    marginTop: 2,
+  },
+  historyTime: {
+    fontSize: 12,
+    color: Colors.textDisabled,
+    marginTop: 2,
+  },
+  spacer: {
+    height: 32,
   },
 });

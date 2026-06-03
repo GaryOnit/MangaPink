@@ -18,7 +18,7 @@ export function useMangaData() {
   const getChaptersByMangaId = useCallback((mangaId: string): Chapter[] => {
     return mockChapters
       .filter((c) => c.mangaId === mangaId)
-      .sort((a, b) => a.index - b.index);
+      .sort((a, b) => a.chapterNumber - b.chapterNumber);
   }, []);
 
   const getPagesByChapter = useCallback((assetKey: string): PageMeta[] => {

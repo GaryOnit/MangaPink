@@ -7,25 +7,25 @@ import { MANGA_CARD } from '../../../utils/constants';
 
 interface Props {
   mangas: Manga[];
-  title: string;
+  title?: string;
   onPressManga: (manga: Manga) => void;
 }
 
 export default function MangaGrid({ mangas, title, onPressManga }: Props) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      {title && <Text style={styles.sectionTitle}>{title}</Text>}
       <FlatList
         data={mangas}
         keyExtractor={(item) => item.id}
-        numColumns={3}
+        numColumns={2}
         scrollEnabled={false}
         columnWrapperStyle={styles.row}
         renderItem={({ item }) => (
           <MangaCard
             manga={item}
-            onPress={() => onPressManga(item)}
-            cardWidth={MANGA_CARD.WIDTH}
+            onPress={onPressManga}
+            width={MANGA_CARD.WIDTH}
           />
         )}
       />
@@ -46,6 +46,6 @@ const styles = StyleSheet.create({
   },
   row: {
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 8,
   },
 });

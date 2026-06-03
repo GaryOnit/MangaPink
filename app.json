@@ -18,8 +18,9 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.mangapink.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#FFF0F5"
       }
     },

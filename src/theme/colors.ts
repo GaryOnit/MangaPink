@@ -15,6 +15,6 @@ export const Colors = {
   card: '#FFFFFF',
   border: '#FFD6E7',
   textPrimary: '#2D1B2E',
-  textSecondary: '#A0608A',
+  textSecondary: '#8B6B7A',
   textDisabled: '#D4B0C5',
 } as const;

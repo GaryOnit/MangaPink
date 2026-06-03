@@ -1,41 +1,41 @@
 import { useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
-  addToBookshelf,
-  removeFromBookshelf,
-  updateLatestChapter,
+  addToBookshelf as addToBookshelfAction,
+  removeFromBookshelf as removeFromBookshelfAction,
+  updateLastRead as updateLastReadAction,
 } from '../store/slices/bookshelfSlice';
+import type { BookshelfEntry } from '../store/slices/bookshelfSlice';
 import {
-  selectBookshelfItems,
-  selectBookshelfMangaIds,
+  selectBookshelfEntries,
+  selectBookshelfList,
 } from '../store/selectors/bookshelfSelectors';
 
 export function useBookshelf() {
   const dispatch = useAppDispatch();
-  const items = useAppSelector(selectBookshelfItems);
-  const mangaIds = useAppSelector(selectBookshelfMangaIds);
+  const entries = useAppSelector(selectBookshelfEntries);
+  const bookshelfList: BookshelfEntry[] = useAppSelector(selectBookshelfList);
 
   const isInBookshelf = useCallback(
-    (mangaId: string) => mangaIds.includes(mangaId),
-    [mangaIds]
+    (mangaId: string): boolean => !!entries[mangaId],
+    [entries]
   );
 
   const addToShelf = useCallback(
-    (mangaId: string, latestChapterId: string) =>
-      dispatch(addToBookshelf({ mangaId, latestChapterId })),
+    (mangaId: string) => dispatch(addToBookshelfAction(mangaId)),
     [dispatch]
   );
 
   const removeFromShelf = useCallback(
-    (mangaId: string) => dispatch(removeFromBookshelf(mangaId)),
+    (mangaId: string) => dispatch(removeFromBookshelfAction(mangaId)),
     [dispatch]
   );
 
-  const updateLatest = useCallback(
-    (mangaId: string, chapterId: string) =>
-      dispatch(updateLatestChapter({ mangaId, chapterId })),
+  const updateLastRead = useCallback(
+    (mangaId: string, chapterId: string, page: number) =>
+      dispatch(updateLastReadAction({ mangaId, chapterId, page })),
     [dispatch]
   );
 
-  return { items, isInBookshelf, addToShelf, removeFromShelf, updateLatest };
+  return { bookshelfList, isInBookshelf, addToShelf, removeFromShelf, updateLastRead };
 }

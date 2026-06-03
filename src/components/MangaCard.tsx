@@ -7,20 +7,20 @@ import { Colors } from '../theme/colors';
 
 interface Props {
   manga: Manga;
-  onPress: () => void;
-  cardWidth?: number;
+  onPress: (manga: Manga) => void;
+  width?: number;
 }
 
-export default function MangaCard({ manga, onPress, cardWidth = 110 }: Props) {
-  const cardHeight = Math.round(cardWidth * (4 / 3));
+export default function MangaCard({ manga, onPress, width = 160 }: Props) {
+  const cardHeight = Math.round(width * 1.4);
   const source = CoverAssets[manga.coverId];
 
   return (
-    <Pressable onPress={onPress} style={[styles.container, { width: cardWidth }]}>
-      <View style={[styles.coverWrap, { width: cardWidth, height: cardHeight }]}>
+    <Pressable onPress={() => onPress(manga)} style={[styles.container, { width }]}>
+      <View style={[styles.coverWrap, { width, height: cardHeight }]}>
         <Image
           source={source}
-          style={{ width: cardWidth, height: cardHeight, borderRadius: 8 }}
+          style={{ width, height: cardHeight, borderRadius: 12 }}
           contentFit="cover"
           transition={150}
           recyclingKey={manga.id}
@@ -31,13 +31,11 @@ export default function MangaCard({ manga, onPress, cardWidth = 110 }: Props) {
           </View>
         )}
       </View>
-      <Text style={styles.title} numberOfLines={2}>{manga.title}</Text>
-      <View style={styles.tagRow}>
-        {manga.tags.slice(0, 2).map((tag) => (
-          <View key={tag} style={styles.tag}>
-            <Text style={styles.tagText}>{tag}</Text>
-          </View>
-        ))}
+      <Text style={styles.title} numberOfLines={1}>{manga.title}</Text>
+      <Text style={styles.author} numberOfLines={1}>{manga.author}</Text>
+      <View style={styles.ratingRow}>
+        <Text style={styles.star}>⭐</Text>
+        <Text style={styles.rating}>{manga.rating.toFixed(1)}</Text>
       </View>
     </Pressable>
   );
@@ -46,6 +44,16 @@ export default function MangaCard({ manga, onPress, cardWidth = 110 }: Props) {
 const styles = StyleSheet.create({
   container: {
     marginBottom: 8,
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 6,
+    shadowColor: Colors.pink200,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   coverWrap: {
     borderRadius: 8,
@@ -67,26 +75,28 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   title: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     color: Colors.textPrimary,
     marginTop: 6,
-    lineHeight: 16,
   },
-  tagRow: {
+  author: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  ratingRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    marginTop: 4,
+    alignItems: 'center',
+    marginTop: 3,
+    gap: 2,
   },
-  tag: {
-    backgroundColor: Colors.pink100,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 4,
+  star: {
+    fontSize: 11,
   },
-  tagText: {
-    color: Colors.pink600,
-    fontSize: 10,
+  rating: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontWeight: '500',
   },
 });

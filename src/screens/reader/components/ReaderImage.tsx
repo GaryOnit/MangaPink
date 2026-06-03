@@ -1,23 +1,26 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { Dimensions, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
-import type { PageMeta } from '../../../types/chapter';
+import type { ImageSourcePropType } from 'react-native';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface Props {
-  pageMeta: PageMeta;
+  source: ImageSourcePropType;
   width: number;
-  pageHeight: number;
-  recyclingKey: string;
+  height: number;
 }
 
-export default function ReaderImage({ pageMeta, width, pageHeight, recyclingKey }: Props) {
+export default function ReaderImage({ source, width, height }: Props) {
+  // 按屏幕宽度等比缩放图片高度
+  const displayHeight = Math.round((SCREEN_WIDTH / width) * height);
+
   return (
     <Image
-      source={pageMeta.source}
-      style={[styles.image, { width, height: pageHeight }]}
+      source={source}
+      style={[styles.image, { width: SCREEN_WIDTH, height: displayHeight }]}
       contentFit="fill"
       transition={150}
-      recyclingKey={recyclingKey}
     />
   );
 }

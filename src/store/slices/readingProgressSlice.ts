@@ -1,48 +1,47 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-export interface ReadingProgress {
+export interface ProgressEntry {
   mangaId: string;
   chapterId: string;
-  pageIndex: number;
-  totalPages: number;
+  page: number;
   updatedAt: number;
 }
 
 export interface ReadingProgressState {
-  progressMap: Record<string, ReadingProgress>;
+  progress: Record<string, ProgressEntry>; // key: `${mangaId}_${chapterId}`
 }
 
 const initialState: ReadingProgressState = {
-  progressMap: {},
+  progress: {},
 };
 
 const readingProgressSlice = createSlice({
   name: 'readingProgress',
   initialState,
   reducers: {
-    updateProgress: (
+    saveProgress: (
       state,
-      action: PayloadAction<{
-        mangaId: string;
-        chapterId: string;
-        pageIndex: number;
-        totalPages: number;
-      }>
+      action: PayloadAction<{ mangaId: string; chapterId: string; page: number }>
     ) => {
-      const { mangaId, chapterId, pageIndex, totalPages } = action.payload;
-      state.progressMap[mangaId] = {
+      const { mangaId, chapterId, page } = action.payload;
+      const key = `${mangaId}_${chapterId}`;
+      state.progress[key] = {
         mangaId,
         chapterId,
-        pageIndex,
-        totalPages,
+        page,
         updatedAt: Date.now(),
       };
     },
     clearProgress: (state, action: PayloadAction<string>) => {
-      delete state.progressMap[action.payload];
+      const keysToDelete = Object.keys(state.progress).filter((k) =>
+        k.startsWith(action.payload + '_')
+      );
+      keysToDelete.forEach((k) => {
+        delete state.progress[k];
+      });
     },
   },
 });
 
-export const { updateProgress, clearProgress } = readingProgressSlice.actions;
+export const { saveProgress, clearProgress } = readingProgressSlice.actions;
 export default readingProgressSlice.reducer;
