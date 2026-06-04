@@ -152,30 +152,21 @@ assets/
 
 ## FlatList 性能规范（阅读器）
 
-- 必须配置：`windowSize={5}`、`maxToRenderPerBatch={3}`、`removeClippedSubviews={true}`
+- 必须配置：`windowSize={3}`、`maxToRenderPerBatch={2}`、`removeClippedSubviews={true}`
 - 必须提供 `getItemLayout`（支持 `initialScrollIndex`）
 - 使用 `expo-image` 而非 RN 原生 `Image`（更好的内存管理）
 - `contentFit="fill"` 用于条漫（保留完整内容），`contentFit="cover"` 用于封面
 
-**动态高度 `getItemLayout` 实现要点：**
+**阅读器翻页模式（⭐ 2026-06-04 更新）：**
 
-- 条漫每页高度不固定，须用 `useMemo` 预计算 `pageOffsets` 数组（累加各页实际高度）
-- `getItemLayout` 直接查表返回 `{ length, offset, index }`，避免运行时重复计算
-- 示例：
+- 阅读器采用**水平翻页模式**：FlatList 开启 `horizontal` + `pagingEnabled`，向左滑进入下一页，向右滑返回上一页
+- 每个 item 为一个 `ScrollView`（宽度 = `SCREEN_WIDTH`），内部放置单张条漫图片，图片高于屏幕时可在页内竖向滚动
+- 图片高度不足屏幕高度时，下方补空白 `View`，避免分页显示错位
+- `getItemLayout` 使用固定宽度（`SCREEN_WIDTH`）计算，不再需要动态累加高度偏移：
   ```typescript
-  const pageOffsets = useMemo(() => {
-    const offsets: number[] = [];
-    let acc = 0;
-    pages.forEach((p) => {
-      offsets.push(acc);
-      acc += (SCREEN_WIDTH / p.width) * p.height;
-    });
-    return offsets;
-  }, [pages]);
-
   const getItemLayout = (_: unknown, index: number) => ({
-    length: (SCREEN_WIDTH / pages[index].width) * pages[index].height,
-    offset: pageOffsets[index] ?? 0,
+    length: SCREEN_WIDTH,
+    offset: SCREEN_WIDTH * index,
     index,
   });
   ```
@@ -236,6 +227,12 @@ assets/
 - **原因**：`expo start` 依赖 Expo Go 客户端，模拟器若未安装 Expo Go 则无法 tunnel/LAN 连接
 - **解决**：使用 `expo run:android`（原生编译模式），`package.json` 的 `android` script 已设置为此命令
 
+### 🟡 阅读器水平翻页中 ScrollView 嵌套注意事项
+
+- **现象**：水平 FlatList 内嵌套竖向 `ScrollView` 时，手势可能存在方向冲突
+- **原因**：RN 手势系统默认会将水平滑动交给外层 FlatList，竖向滑动交给内层 ScrollView，两者方向不同时通常可自动区分
+- **结论**：实际测试无冲突，水平翻页与竖向滚动可共存，无需额外配置 `nestedScrollEnabled`
+
 ### 🟠 `onViewableItemsChanged` 不能直接绑定会变化的函数引用
 
 - **现象**：FlatList 的 `onViewableItemsChanged` prop 传入 `useCallback` 返回值，当依赖变化时出现 React 警告，进度更新异常
@@ -263,4 +260,13 @@ assets/
 
 ---
 
-*由 CatPaw AI 自动生成，开发过程中根据实际情况更新。最后更新：2026-06-03（Phase 4 知识库同步）*
+## 最近浏览展示规范
+
+- `ProfileScreen` 的「最近浏览」列表按 `mangaId` 去重，每个作品只保留最新一条记录
+- 去重逻辑在渲染时通过 `Set<string>` 过滤，不修改 Redux store 中的原始 `historyList`（store 保持全量记录）
+- 每条展示：封面缩略图 + 作品标题 + 相对时间（不显示章节号）
+- 最多展示 10 部（去重后取前 10）
+
+---
+
+*由 CatPaw AI 自动生成，开发过程中根据实际情况更新。最后更新：2026-06-04（阅读器水平翻页 + 最近浏览去重合并）*

@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import {
   View,
   FlatList,
@@ -7,6 +7,8 @@ import {
   StyleSheet,
   ViewToken,
   StatusBar,
+  Dimensions,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -17,17 +19,14 @@ import ReaderProgressBar from './components/ReaderProgressBar';
 import { useMangaData } from '../../hooks/useMangaData';
 import { useReadingProgress } from '../../hooks/useReadingProgress';
 import { useBookshelf } from '../../hooks/useBookshelf';
-import { SCREEN } from '../../utils/constants';
 import type { PageMeta } from '../../types/chapter';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Reader'>;
 
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 const VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: 50 };
 const SAVE_THROTTLE = 3;
-
-function getPageDisplayHeight(page: PageMeta): number {
-  return Math.round((SCREEN.WIDTH / page.width) * page.height);
-}
 
 export default function ReaderScreen({ navigation, route }: Props) {
   const { mangaId, chapterId, initialPage = 0 } = route.params;
@@ -44,16 +43,6 @@ export default function ReaderScreen({ navigation, route }: Props) {
   const [headerVisible, setHeaderVisible] = useState(true);
   const currentPageRef = useRef(initialPage);
   const lastSavedPageRef = useRef(initialPage);
-
-  const pageOffsets = useMemo(() => {
-    const offsets: number[] = [];
-    let offset = 0;
-    for (const page of pages) {
-      offsets.push(offset);
-      offset += getPageDisplayHeight(page);
-    }
-    return offsets;
-  }, [pages]);
 
   useEffect(() => {
     return () => {
@@ -87,17 +76,30 @@ export default function ReaderScreen({ navigation, route }: Props) {
 
   const getItemLayout = useCallback(
     (_: ArrayLike<PageMeta> | null | undefined, index: number) => ({
-      length: pages[index] ? getPageDisplayHeight(pages[index]) : 0,
-      offset: pageOffsets[index] ?? 0,
+      length: SCREEN_WIDTH,
+      offset: SCREEN_WIDTH * index,
       index,
     }),
-    [pages, pageOffsets]
+    []
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: PageMeta }) => (
-      <ReaderImage source={item.source} width={item.width} height={item.height} />
-    ),
+    ({ item }: { item: PageMeta }) => {
+      const displayHeight = Math.round((SCREEN_WIDTH / item.width) * item.height);
+      return (
+        <ScrollView
+          style={styles.pageScrollView}
+          contentContainerStyle={styles.pageScrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          <ReaderImage source={item.source} width={item.width} height={item.height} />
+          {displayHeight < SCREEN_HEIGHT && (
+            <View style={{ height: SCREEN_HEIGHT - displayHeight }} />
+          )}
+        </ScrollView>
+      );
+    },
     []
   );
 
@@ -117,15 +119,17 @@ export default function ReaderScreen({ navigation, route }: Props) {
           data={pages}
           keyExtractor={(_, index) => `page-${index}`}
           renderItem={renderItem}
-          windowSize={5}
-          maxToRenderPerBatch={3}
-          initialNumToRender={3}
+          horizontal
+          pagingEnabled
+          windowSize={3}
+          maxToRenderPerBatch={2}
+          initialNumToRender={2}
           removeClippedSubviews={true}
           getItemLayout={getItemLayout}
           onViewableItemsChanged={onViewableItemsChangedRef.current}
           viewabilityConfig={viewabilityConfigRef.current}
           initialScrollIndex={initialPage > 0 ? initialPage : undefined}
-          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
           bounces={false}
         />
       </Pressable>
@@ -154,6 +158,13 @@ const styles = StyleSheet.create({
   },
   readerArea: {
     flex: 1,
+  },
+  pageScrollView: {
+    width: SCREEN_WIDTH,
+    flex: 1,
+  },
+  pageScrollContent: {
+    flexGrow: 1,
   },
   footer: {
     position: 'absolute',

@@ -49,20 +49,28 @@ export default function ProfileScreen() {
           {historyList.length === 0 ? (
             <Text style={styles.emptyHint}>暂无浏览记录</Text>
           ) : (
-            historyList.slice(0, 10).map((entry, idx) => {
-              const manga = getMangaById(entry.mangaId);
-              if (!manga) return null;
-              return (
-                <View key={`${entry.mangaId}_${entry.chapterId}_${idx}`} style={styles.historyItem}>
-                  <MangaCover mangaId={manga.coverId} size="sm" />
-                  <View style={styles.historyInfo}>
-                    <Text style={styles.historyTitle}>{manga.title}</Text>
-                    <Text style={styles.historyChapter}>{entry.chapterId}</Text>
-                    <Text style={styles.historyTime}>{formatRelativeTime(entry.readAt)}</Text>
+            (() => {
+              // 按 mangaId 去重，每个作品只保留最新一条记录
+              const seen = new Set<string>();
+              const deduped = historyList.filter((entry) => {
+                if (seen.has(entry.mangaId)) return false;
+                seen.add(entry.mangaId);
+                return true;
+              });
+              return deduped.slice(0, 10).map((entry) => {
+                const manga = getMangaById(entry.mangaId);
+                if (!manga) return null;
+                return (
+                  <View key={entry.mangaId} style={styles.historyItem}>
+                    <MangaCover mangaId={manga.coverId} size="sm" />
+                    <View style={styles.historyInfo}>
+                      <Text style={styles.historyTitle}>{manga.title}</Text>
+                      <Text style={styles.historyTime}>{formatRelativeTime(entry.readAt)}</Text>
+                    </View>
                   </View>
-                </View>
-              );
-            })
+                );
+              });
+            })()
           )}
         </View>
 
@@ -169,11 +177,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: Colors.textPrimary,
-  },
-  historyChapter: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 2,
   },
   historyTime: {
     fontSize: 12,
