@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   View,
   FlatList,
@@ -44,35 +44,43 @@ export default function ReaderScreen({ navigation, route }: Props) {
   const currentPageRef = useRef(initialPage);
   const lastSavedPageRef = useRef(initialPage);
 
-  useEffect(() => {
-    return () => {
-      if (pages.length > 0) {
-        const page = currentPageRef.current;
-        saveProgressEntry(mangaId, chapterId, page);
-        updateLastRead(mangaId, chapterId, page);
-      }
-    };
-  }, [mangaId, chapterId, saveProgressEntry, updateLastRead, pages.length]);
+  // 将最新的 dispatch 相关数据存入 ref，供 onViewableRef 读取
+  const saveProgressRef = useRef(saveProgressEntry);
+  const mangaIdRef = useRef(mangaId);
+  const chapterIdRef = useRef(chapterId);
+  const pagesLengthRef = useRef(pages.length);
 
-  const onViewableItemsChanged = useCallback(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      if (viewableItems.length === 0) return;
-      const minIndex = Math.min(...viewableItems.map((v) => v.index ?? 0));
-      currentPageRef.current = minIndex;
-      setCurrentPage(minIndex);
-      if (Math.abs(minIndex - lastSavedPageRef.current) >= SAVE_THROTTLE) {
-        saveProgressEntry(mangaId, chapterId, minIndex);
-        lastSavedPageRef.current = minIndex;
-      }
-    },
-    [saveProgressEntry, mangaId, chapterId]
-  );
+  useEffect(() => {
+    saveProgressRef.current = saveProgressEntry;
+    mangaIdRef.current = mangaId;
+    chapterIdRef.current = chapterId;
+    pagesLengthRef.current = pages.length;
+  }, [saveProgressEntry, mangaId, chapterId, pages.length]);
+
+  // onViewableItemsChanged 必须用 useRef 包裹，保证 FlatList 拿到的引用永远稳定
+  const onViewableRef = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    if (viewableItems.length === 0) return;
+    const minIndex = Math.min(...viewableItems.map((v) => v.index ?? 0));
+    currentPageRef.current = minIndex;
+    setCurrentPage(minIndex);
+    if (Math.abs(minIndex - lastSavedPageRef.current) >= SAVE_THROTTLE) {
+      saveProgressRef.current(mangaIdRef.current, chapterIdRef.current, minIndex);
+      lastSavedPageRef.current = minIndex;
+    }
+  });
 
   const viewabilityConfigRef = useRef(VIEWABILITY_CONFIG);
-  const onViewableItemsChangedRef = useRef(onViewableItemsChanged);
+
   useEffect(() => {
-    onViewableItemsChangedRef.current = onViewableItemsChanged;
-  }, [onViewableItemsChanged]);
+    return () => {
+      if (pagesLengthRef.current > 0) {
+        const page = currentPageRef.current;
+        saveProgressRef.current(mangaIdRef.current, chapterIdRef.current, page);
+        updateLastRead(mangaIdRef.current, chapterIdRef.current, page);
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateLastRead]);
 
   const getItemLayout = useCallback(
     (_: ArrayLike<PageMeta> | null | undefined, index: number) => ({
@@ -83,24 +91,36 @@ export default function ReaderScreen({ navigation, route }: Props) {
     []
   );
 
+  const handleToggleHeader = useCallback(() => {
+    setHeaderVisible((v) => !v);
+  }, []);
+
   const renderItem = useCallback(
     ({ item }: { item: PageMeta }) => {
       const displayHeight = Math.round((SCREEN_WIDTH / item.width) * item.height);
       return (
-        <ScrollView
-          style={styles.pageScrollView}
-          contentContainerStyle={styles.pageScrollContent}
-          showsVerticalScrollIndicator={false}
-          bounces={false}
+        // Pressable 外层处理点击切换 UI，不干扰 FlatList 水平滑动手势
+        // android_ripple={null} 避免 Android 上出现涟漪效果影响阅读体验
+        <Pressable
+          style={styles.pageWrapper}
+          onPress={handleToggleHeader}
+          android_ripple={null}
         >
-          <ReaderImage source={item.source} width={item.width} height={item.height} />
-          {displayHeight < SCREEN_HEIGHT && (
-            <View style={{ height: SCREEN_HEIGHT - displayHeight }} />
-          )}
-        </ScrollView>
+          <ScrollView
+            style={styles.pageScrollView}
+            contentContainerStyle={styles.pageScrollContent}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            <ReaderImage source={item.source} width={item.width} height={item.height} />
+            {displayHeight < SCREEN_HEIGHT && (
+              <View style={{ height: SCREEN_HEIGHT - displayHeight }} />
+            )}
+          </ScrollView>
+        </Pressable>
       );
     },
-    []
+    [handleToggleHeader]
   );
 
   if (pages.length === 0) {
@@ -114,25 +134,23 @@ export default function ReaderScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
-      <Pressable style={styles.readerArea} onPress={() => setHeaderVisible((v) => !v)}>
-        <FlatList
-          data={pages}
-          keyExtractor={(_, index) => `page-${index}`}
-          renderItem={renderItem}
-          horizontal
-          pagingEnabled
-          windowSize={3}
-          maxToRenderPerBatch={2}
-          initialNumToRender={2}
-          removeClippedSubviews={true}
-          getItemLayout={getItemLayout}
-          onViewableItemsChanged={onViewableItemsChangedRef.current}
-          viewabilityConfig={viewabilityConfigRef.current}
-          initialScrollIndex={initialPage > 0 ? initialPage : undefined}
-          showsHorizontalScrollIndicator={false}
-          bounces={false}
-        />
-      </Pressable>
+      <FlatList
+        data={pages}
+        keyExtractor={(_, index) => `page-${index}`}
+        renderItem={renderItem}
+        horizontal
+        pagingEnabled
+        windowSize={3}
+        maxToRenderPerBatch={2}
+        initialNumToRender={2}
+        removeClippedSubviews={true}
+        getItemLayout={getItemLayout}
+        onViewableItemsChanged={onViewableRef.current}
+        viewabilityConfig={viewabilityConfigRef.current}
+        initialScrollIndex={initialPage > 0 ? initialPage : undefined}
+        showsHorizontalScrollIndicator={false}
+        bounces={false}
+      />
       {headerVisible && (
         <ReaderHeader
           mangaTitle={manga?.title ?? ''}
@@ -156,7 +174,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
-  readerArea: {
+  pageWrapper: {
+    width: SCREEN_WIDTH,
     flex: 1,
   },
   pageScrollView: {

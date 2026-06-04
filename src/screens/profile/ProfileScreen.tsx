@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, ScrollView, Pressable, SafeAreaView, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHistory } from '../../hooks/useHistory';
 import { useMangaData } from '../../hooks/useMangaData';
 import { Colors } from '../../theme/colors';

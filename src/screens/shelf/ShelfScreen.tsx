@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, FlatList, SafeAreaView, StyleSheet } from 'react-native';
+import { View, Text, FlatList, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ShelfStackParamList } from '../../navigation/types';
 import ShelfItem from './components/ShelfItem';

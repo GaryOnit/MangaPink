@@ -1,21 +1,25 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { store, persistor } from './src/store';
 import RootNavigator from './src/navigation/RootNavigator';
 
-function SplashScreen() {
+// 在模块顶层立即阻止原生 Splash 自动消失（必须在组件渲染前调用）
+SplashScreen.preventAutoHideAsync();
+
+function LoadingScreen() {
   return (
-    <View style={splashStyles.container}>
+    <View style={loadingStyles.container}>
       <ActivityIndicator size="large" color="#FF6B9D" />
-      <Text style={splashStyles.text}>萌漫 MangaPink</Text>
+      <Text style={loadingStyles.text}>萌漫 MangaPink</Text>
     </View>
   );
 }
 
-const splashStyles = StyleSheet.create({
+const loadingStyles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
@@ -30,12 +34,37 @@ const splashStyles = StyleSheet.create({
 });
 
 export default function App() {
+  const [isAppReady, setIsAppReady] = useState(false);
+
+  // 根 View 布局完成后隐藏原生 Splash 屏
+  const onRootLayout = useCallback(async () => {
+    if (!isAppReady) {
+      setIsAppReady(true);
+      await SplashScreen.hideAsync();
+    }
+  }, [isAppReady]);
+
+  // 布局未完成前返回 null，保持原生 Splash 可见
+  if (!isAppReady) {
+    return (
+      <View style={rootStyles.fill} onLayout={onRootLayout} />
+    );
+  }
+
   return (
-    <Provider store={store}>
-      <PersistGate loading={<SplashScreen />} persistor={persistor}>
-        <StatusBar style="dark" backgroundColor="#FFF0F5" />
-        <RootNavigator />
-      </PersistGate>
-    </Provider>
+    <View style={rootStyles.fill} onLayout={onRootLayout}>
+      <Provider store={store}>
+        <PersistGate loading={<LoadingScreen />} persistor={persistor}>
+          <StatusBar style="dark" backgroundColor="#FFF0F5" />
+          <RootNavigator />
+        </PersistGate>
+      </Provider>
+    </View>
   );
 }
+
+const rootStyles = StyleSheet.create({
+  fill: {
+    flex: 1,
+  },
+});

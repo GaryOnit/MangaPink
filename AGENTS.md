@@ -177,14 +177,30 @@ assets/
 - 若直接传入 `useCallback` 返回值，FlatList 会在依赖变化时触发「Cannot update a component from inside the function body of a different component」警告并重建
 - 正确模式：
   ```typescript
-  const onViewableRef = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
-    // 通过 ref 访问最新的 dispatch / mangaId / chapterId
-  });
-  useEffect(() => {
-    onViewableRef.current = ({ viewableItems }) => { /* ... */ };
-  }, [dispatch, mangaId, chapterId, pages.length]);
+  // 将所有闭包依赖值存入 ref，避免陈旧值问题
+  const saveProgressRef = useRef(saveProgressEntry);
+  const mangaIdRef = useRef(mangaId);
+  const chapterIdRef = useRef(chapterId);
+  const pagesLengthRef = useRef(pages.length);
+  useEffect(() => { saveProgressRef.current = saveProgressEntry; }, [saveProgressEntry]);
+  useEffect(() => { mangaIdRef.current = mangaId; }, [mangaId]);
+  useEffect(() => { chapterIdRef.current = chapterId; }, [chapterId]);
+  useEffect(() => { pagesLengthRef.current = pages.length; }, [pages.length]);
 
-  // FlatList 绑定
+  // onViewableItemsChanged 用 useRef 包裹，回调内通过 ref 读取最新值
+  const onViewableRef = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    if (viewableItems.length === 0) return;
+    const minIndex = Math.min(...viewableItems.map((v) => v.index ?? 0));
+    currentPageRef.current = minIndex;
+    setCurrentPage(minIndex);
+    // 通过 ref 读取最新依赖，无闭包陈旧值
+    if (Math.abs(minIndex - lastSavedPageRef.current) >= SAVE_THROTTLE) {
+      saveProgressRef.current(mangaIdRef.current, chapterIdRef.current, minIndex);
+      lastSavedPageRef.current = minIndex;
+    }
+  });
+
+  // FlatList 始终绑定 ref.current（稳定引用）
   <FlatList onViewableItemsChanged={onViewableRef.current} ... />
   ```
 
@@ -220,6 +236,21 @@ assets/
 - **原因**：NativeWind v4 内置依赖 `react-native-worklets-core`，该库需要原生编译，Expo Managed Workflow + SDK 51 不支持
 - **解决**：降级到 `nativewind@^2.0.11`，移除 `nativewind/babel` 和 `withNativeWind` 配置
 - **约束**：❌ 禁止再次升级到 NativeWind v4，除非同步升级到 Expo SDK 53+ 并切换到 Bare Workflow
+
+### 🟠 SafeAreaView 必须从 react-native-safe-area-context 导入
+
+- **现象**：页面顶部内容被 StatusBar 遮挡，Android 设备上尤为明显
+- **原因**：`react-native` 内置的 `SafeAreaView` 在 Android 上不处理 StatusBar 高度，只处理 iOS notch；而 `react-native-safe-area-context` 的 `SafeAreaView` 在 Android/iOS 均正确计算安全区域
+- **解决**：所有 Screen 级别组件统一从 `react-native-safe-area-context` 导入 `SafeAreaView`，项目已有此依赖（`react-native-safe-area-context@4.10.5`）
+- **约束**：❌ 禁止从 `react-native` 直接导入 `SafeAreaView` 用于 Screen 级布局
+
+### 🟠 expo-splash-screen 的 preventAutoHideAsync 必须在模块顶层调用
+
+- **现象**：原生 Splash 在 JS bundle 加载完成后立即消失，用户看不到启动屏
+- **原因**：`preventAutoHideAsync()` 必须在 JS 引擎加载模块时同步执行，若放在组件 `useEffect` 或函数体内，时机已晚，原生 Splash 可能已自动消失
+- **解决**：在 `App.tsx` 所有 import 之后、组件定义之前，在模块顶层立即调用 `SplashScreen.preventAutoHideAsync()`；在根 View 的 `onLayout` 回调中调用 `SplashScreen.hideAsync()`
+- **注意**：若 App.tsx 中有自定义组件也叫 `SplashScreen`，必须重命名（如 `LoadingScreen`）避免与 `import * as SplashScreen` 命名冲突
+- **注意**：`isAppReady=false` 时不能 return null（onLayout 无法触发），应 return 空 `<View onLayout={onRootLayout} />`
 
 ### 🟠 `expo start --android` 在无 Expo Go 的模拟器上会卡住
 
@@ -269,4 +300,4 @@ assets/
 
 ---
 
-*由 CatPaw AI 自动生成，开发过程中根据实际情况更新。最后更新：2026-06-04（阅读器水平翻页 + 最近浏览去重合并）*
+*由 CatPaw AI 自动生成，开发过程中根据实际情况更新。最后更新：2026-06-04（Bug修复：SafeAreaView遮挡+阅读器手势+Splash屏接入）*
