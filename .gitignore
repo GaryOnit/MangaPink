@@ -17,3 +17,4 @@ yarn-error.*
 *.pem
 .env
 .env.local
+.catpaw/
