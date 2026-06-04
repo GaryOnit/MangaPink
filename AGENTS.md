@@ -16,7 +16,7 @@
 
 ## 目录结构约定
 
-实际已生成文件（截至 2026-06-03，共 49 个源文件）：
+实际已生成文件（截至 2026-06-04，共 51 个源文件）：
 
 ```
 src/
@@ -45,6 +45,9 @@ src/
         ReaderHeader.tsx          # ⭐ 从 ReaderScreen 拆分（行数控制）
         ReaderImage.tsx
         ReaderProgressBar.tsx
+        readerStyles.ts           # ⭐ 从 ReaderScreen 拆分的样式集中文件
+      hooks/
+        useChapterNavigation.ts   # ⭐ 章节边界切换逻辑 Hook
     profile/
       ProfileScreen.tsx
   components/                     # 全局公共组件（无状态/轻状态）
@@ -204,6 +207,15 @@ assets/
   <FlatList onViewableItemsChanged={onViewableRef.current} ... />
   ```
 
+**章节边界切换实现模式（⭐ 2026-06-04 更新）：**
+
+- 在 `pagingEnabled` 水平 FlatList 中，通过 `onScrollBeginDrag` + `onMomentumScrollEnd` 组合检测边界滑动并触发章节切换
+- `onScrollBeginDrag`：记录当前页（`dragStartPageRef`）和是否正在拖动（`isDraggingRef = true`）
+- `onMomentumScrollEnd`：计算滑动后的页码，若页码未变且处于第一页/最后一页，说明触达边界，弹出 Alert 提示切换上/下一章
+- 防重入：`isAlertOpenRef` 标志位避免 Alert 重复弹出（用户多次滑动边界时）
+- 导航使用 `navigation.replace` 而非 `navigation.push`，避免章节间来回切换导致导航栈无限累积
+- 逻辑封装在 `src/screens/reader/hooks/useChapterNavigation.ts`，ReaderScreen 通过解构 Hook 返回值绑定到 FlatList props
+
 ---
 
 ## 资源管理规范
@@ -276,6 +288,20 @@ assets/
 - **原因**：`redux-persist` 的 rehydrate 是异步过程，若不等待完成直接渲染，组件会拿到未恢复的初始状态
 - **解决**：`App.tsx` 必须用 `<PersistGate loading={<LoadingScreen />} persistor={persistor}>` 包裹根导航，等待 rehydrate 完成后再渲染
 
+### 🟠 expo prebuild 会覆盖 values-v31/styles.xml 的手动修改
+
+- **现象**：手动修改 `android/app/src/main/res/values-v31/styles.xml`（如配置 `windowSplashScreenAnimatedIcon`）后，再次执行 `expo prebuild` 时改动被覆盖还原
+- **原因**：`expo prebuild` 会根据 `app.json` 配置重新生成原生 Android 模板文件，任何对 `android/` 目录内文件的手动修改均面临被覆盖的风险
+- **解决**：有两种方案：① 编写 Expo Config Plugin（在 `app.json` 中 `plugins` 字段注册自定义插件），通过插件在 prebuild 后自动应用修改；② 若只做一次性修改，在每次 `expo prebuild` 后手动重新应用，并在项目 README/AGENTS.md 中记录补丁内容
+- **约束**：❌ 不要依赖手动修改 `android/` 原生文件而不配套 Config Plugin，否则升级 Expo SDK 或团队成员执行 prebuild 后修改会丢失
+
+### 🟠 Android 12+ 原生 Splash 去除 icon 放大动画
+
+- **现象**：Android 12+（API 31+）原生 Splash 屏默认会将 App 图标以放大动画形式展示，与 App 设计风格不符，且图标边缘有白色背景圆形区域
+- **原因**：Android 12 的 `SplashScreen` API 默认使用 `windowSplashScreenAnimatedIcon` 展示 App 图标，并自动添加背景和入场动画
+- **解决**：在 `android/app/src/main/res/values-v31/styles.xml` 中，将 `windowSplashScreenAnimatedIcon` 设置为一个完全透明的 vector drawable（如 `@drawable/splash_icon_transparent`），并在 `drawable/splash_icon_transparent.xml` 中定义空的 `<vector>` 元素；同时设置 `windowSplashScreenBackground` 为品牌色（如 `#FEDFE8`），实现 Android 12+ 原生 Splash 阶段纯色背景、无图标放大动画的效果
+- **注意**：此修改在 `values-v31/` 目录下生效（仅 Android 12+），不影响旧版 Android 行为；且每次 `expo prebuild` 后需重新应用（见上一条 Gotcha）
+
 ---
 
 ## Git 提交规范
@@ -300,4 +326,48 @@ assets/
 
 ---
 
-*由 CatPaw AI 自动生成，开发过程中根据实际情况更新。最后更新：2026-06-04（Bug修复：SafeAreaView遮挡+阅读器手势+Splash屏接入）*
+## 阅读器章节切换规范
+
+**触发时机：**
+
+- **下一章**：在当前章节最后一页继续向左滑（pagingEnabled FlatList 到达末尾边界后继续拖动）
+- **上一章**：在当前章节第一页继续向右滑（pagingEnabled FlatList 到达开头边界后继续拖动）
+
+**实现组件：**
+
+- 逻辑封装在 `src/screens/reader/hooks/useChapterNavigation.ts`
+- Hook 接收 `{ pages, currentPage, mangaId, chapterId, navigation, allChapters }` 等参数
+- 返回 `{ onScrollBeginDrag, onMomentumScrollEnd }` 供 FlatList 绑定
+
+**防重入机制：**
+
+- `isAlertOpenRef`：`useRef<boolean>`，Alert 弹出期间置为 `true`，Alert 关闭（用户确认或取消）后重置为 `false`，防止连续边界滑动多次弹出 Alert
+- `isDraggingRef`：`useRef<boolean>`，拖动开始置为 `true`，`onMomentumScrollEnd` 触发后置为 `false`
+
+**导航方式：**
+
+- 使用 `navigation.replace('Reader', { mangaId, chapterId: nextChapterId, initialPage: 0 })` 而非 `navigation.push`
+- 原因：`replace` 替换当前路由栈顶项，避免用户在多章节间来回切换时导航栈无限累积，导致返回键行为异常
+
+**边界判断逻辑：**
+
+```typescript
+// onScrollBeginDrag：记录起始页
+dragStartPageRef.current = currentPageRef.current;
+isDraggingRef.current = true;
+
+// onMomentumScrollEnd：判断页码是否变化
+const newPage = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+if (newPage === dragStartPageRef.current) {
+  // 页码未变 = 触达边界
+  if (newPage === 0 && dragStartPageRef.current === 0) {
+    // 右滑边界 → 提示上一章
+  } else if (newPage === pages.length - 1) {
+    // 左滑边界 → 提示下一章
+  }
+}
+```
+
+---
+
+*由 CatPaw AI 自动生成，开发过程中根据实际情况更新。最后更新：2026-06-04（Splash修复+章节切换导航+readerStyles拆分+expo prebuild覆盖问题+Android 12+ Splash去动画）*
