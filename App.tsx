@@ -55,8 +55,9 @@ export default function App() {
   }, [isAppReady]);
 
   // 布局未完成前渲染空 View（触发 onLayout），原生 Splash 保持可见
+  // 背景色与 splash 一致，防止原生 Splash 意外提前消失时露出白屏
   if (!isAppReady) {
-    return <View style={styles.fill} onLayout={onRootLayout} />;
+    return <View style={styles.splashPlaceholder} onLayout={onRootLayout} />;
   }
 
   return (
@@ -74,5 +75,9 @@ export default function App() {
 const styles = StyleSheet.create({
   fill: {
     flex: 1,
+  },
+  splashPlaceholder: {
+    flex: 1,
+    backgroundColor: '#FEDFE8',
   },
 });

@@ -4,11 +4,11 @@ import {
   FlatList,
   Pressable,
   Text,
-  StyleSheet,
   ViewToken,
   StatusBar,
-  Dimensions,
   ScrollView,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -16,15 +16,15 @@ import type { HomeStackParamList } from '../../navigation/types';
 import ReaderImage from './components/ReaderImage';
 import ReaderHeader from './components/ReaderHeader';
 import ReaderProgressBar from './components/ReaderProgressBar';
+import { readerStyles as styles, SCREEN_WIDTH } from './components/readerStyles';
 import { useMangaData } from '../../hooks/useMangaData';
 import { useReadingProgress } from '../../hooks/useReadingProgress';
 import { useBookshelf } from '../../hooks/useBookshelf';
+import { useChapterNavigation } from './hooks/useChapterNavigation';
 import type { PageMeta } from '../../types/chapter';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Reader'>;
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const SCREEN_HEIGHT = Dimensions.get('window').height;
 const VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: 50 };
 const SAVE_THROTTLE = 3;
 
@@ -71,6 +71,17 @@ export default function ReaderScreen({ navigation, route }: Props) {
 
   const viewabilityConfigRef = useRef(VIEWABILITY_CONFIG);
 
+  // 章节切换导航：边界检测 + Alert + navigation.replace
+  const { handleScrollBeginDrag, handleMomentumScrollEnd } = useChapterNavigation({
+    mangaId,
+    chapterId,
+    navigation,
+    chapters,
+    pagesLength: pages.length,
+    screenWidth: SCREEN_WIDTH,
+    currentPageRef,
+  });
+
   useEffect(() => {
     return () => {
       if (pagesLengthRef.current > 0) {
@@ -96,30 +107,22 @@ export default function ReaderScreen({ navigation, route }: Props) {
   }, []);
 
   const renderItem = useCallback(
-    ({ item }: { item: PageMeta }) => {
-      const displayHeight = Math.round((SCREEN_WIDTH / item.width) * item.height);
-      return (
-        // Pressable 外层处理点击切换 UI，不干扰 FlatList 水平滑动手势
-        // android_ripple={null} 避免 Android 上出现涟漪效果影响阅读体验
-        <Pressable
-          style={styles.pageWrapper}
-          onPress={handleToggleHeader}
-          android_ripple={null}
+    ({ item }: { item: PageMeta }) => (
+      <Pressable
+        style={styles.pageWrapper}
+        onPress={handleToggleHeader}
+        android_ripple={null}
+      >
+        <ScrollView
+          style={styles.pageScrollView}
+          contentContainerStyle={styles.pageScrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
         >
-          <ScrollView
-            style={styles.pageScrollView}
-            contentContainerStyle={styles.pageScrollContent}
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-          >
-            <ReaderImage source={item.source} width={item.width} height={item.height} />
-            {displayHeight < SCREEN_HEIGHT && (
-              <View style={{ height: SCREEN_HEIGHT - displayHeight }} />
-            )}
-          </ScrollView>
-        </Pressable>
-      );
-    },
+          <ReaderImage source={item.source} width={item.width} height={item.height} />
+        </ScrollView>
+      </Pressable>
+    ),
     [handleToggleHeader]
   );
 
@@ -150,6 +153,11 @@ export default function ReaderScreen({ navigation, route }: Props) {
         initialScrollIndex={initialPage > 0 ? initialPage : undefined}
         showsHorizontalScrollIndicator={false}
         bounces={false}
+        scrollEventThrottle={16}
+        onScrollBeginDrag={handleScrollBeginDrag}
+        onMomentumScrollEnd={
+          handleMomentumScrollEnd as (e: NativeSyntheticEvent<NativeScrollEvent>) => void
+        }
       />
       {headerVisible && (
         <ReaderHeader
@@ -168,38 +176,3 @@ export default function ReaderScreen({ navigation, route }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  pageWrapper: {
-    width: SCREEN_WIDTH,
-    flex: 1,
-  },
-  pageScrollView: {
-    width: SCREEN_WIDTH,
-    flex: 1,
-  },
-  pageScrollContent: {
-    flexGrow: 1,
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  emptyContainer: {
-    flex: 1,
-    backgroundColor: '#000',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-});

@@ -1,0 +1,20 @@
+<resources>
+  <!--
+    Android 12+（API 31+）强制启用原生 SplashScreen API。
+    不设置 windowSplashScreenAnimatedIcon 和 windowSplashScreenIconBackgroundColor，
+    系统会使用 App launcher icon 作为默认图标——但通过设置
+    windowSplashScreenBackground 为不透明背景色后，系统 icon 会被遮盖在下方不可见。
+
+    关键：windowSplashScreenBackground 必须是不透明的纯色，
+    且 windowSplashScreenAnimatedIcon 完全不设置时系统虽然仍加载 icon，
+    但 icon 区域的实际渲染受 windowSplashScreenIconBackgroundColor 和图层影响。
+
+    正确做法：同时设置透明 icon 且不设置 IconBackgroundColor，
+    让整个原生 Splash 阶段只有背景色可见。
+  -->
+  <style name="Theme.App.SplashScreen" parent="AppTheme">
+    <item name="android:windowBackground">@drawable/splashscreen</item>
+    <item name="android:windowSplashScreenBackground">@color/splashscreen_background</item>
+    <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon_transparent</item>
+  </style>
+</resources>
